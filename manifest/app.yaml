@@ -1,0 +1,65 @@
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mianatra-web
+  namespace: mianatra
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mianatra-web
+  template:
+    metadata:
+      labels:
+        app: mianatra-web
+    spec:
+      containers:
+      - name: web
+        image: votre-registry/mianatra-web:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+        envFrom:
+        - configMapRef:
+            name: mianatra-config
+        - secretRef:
+            name: mianatra-secrets
+        volumeMounts:
+        - name: uploads
+          mountPath: /app/static/uploads
+      volumes:
+      - name: uploads
+        persistentVolumeClaim:
+          claimName: uploads-pvc
+
+---
+# Service (NodePort pour l'accès externe)
+apiVersion: v1
+kind: Service
+metadata:
+  name: mianatra-web
+  namespace: mianatra
+spec:
+  type: NodePort
+  selector:
+    app: mianatra-web
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+      nodePort: 30500
+
+---
+# PVC pour les uploads
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uploads-pvc
+  namespace: mianatra
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Gi

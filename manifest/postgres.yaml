@@ -1,0 +1,62 @@
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mianatra-db
+  namespace: mianatra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mianatra-db
+  template:
+    metadata:
+      labels:
+        app: mianatra-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:13
+        envFrom:
+        - secretRef:
+            name: mianatra-secrets
+        - configMapRef:
+            name: mianatra-config
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+
+---
+# Service (ClusterIP pour l'accès interne)
+apiVersion: v1
+kind: Service
+metadata:
+  name: mianatra-db
+  namespace: mianatra
+spec:
+  selector:
+    app: mianatra-db
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+
+---
+# PVC pour le stockage persistant
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: mianatra
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
