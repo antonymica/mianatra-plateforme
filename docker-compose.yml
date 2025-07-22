@@ -4,7 +4,7 @@ services:
   web:
     build: .
     ports:
-      - "5000:5000"
+      - "5321:5000"  
     volumes:
       - .:/app
       - uploads:/app/static/uploads
@@ -17,6 +17,8 @@ services:
       - FLASK_DEBUG=1
     depends_on:
       - db
+    networks:
+      - backend_network
 
   db:
     image: postgres:13
@@ -27,9 +29,19 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5432:5432"
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pdf_courses"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
   uploads:
+
+networks:
+  backend_network:
+    driver: bridge
+    internal: true  
