@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4 pdf-viewer-container">
+    <div class="row mb-3">
+        <div class="col">
+            <h2><i class="bi bi-file-earmark-pdf"></i> {{ course.title }}</h2>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group">
+                <button id="toggle-description" class="btn btn-outline-secondary">
+                    <i class="bi bi-layout-sidebar"></i> <span class="btn-text">Description</span>
+                </button>
+                <button id="fullscreen-btn" class="btn btn-outline-primary">
+                    <i class="bi bi-fullscreen"></i> Plein écran
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row gx-3" style="height: calc(100vh - 180px);">
+        <!-- Colonne Description -->
+        <div id="description-col" class="col-md-4 h-100" style="display: none;">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="mb-0">Description du cours</h5>
+                    <button id="close-description" class="btn btn-sm btn-close"></button>
+                </div>
+                <div class="card-body markdown-content overflow-auto">
+                    {{ course.description|markdown }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne PDF -->
+        <div id="pdf-col" class="col-md-8 h-100" style="display: block;">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Visionneuse PDF</h5>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-secondary zoom-btn" data-action="zoom-out">
+                                <i class="bi bi-dash-lg"></i>
+                            </button>
+                            <span class="btn btn-sm btn-outline-secondary disabled px-3" id="zoom-level">100%</span>
+                            <button class="btn btn-sm btn-outline-secondary zoom-btn" data-action="zoom-in">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary zoom-btn" data-action="fit-width">
+                                <i class="bi bi-arrows-angle-expand"></i> Ajuster
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0 h-100">
+                    <div id="pdf-embed-container" class="h-100 w-100">
+                        <embed id="pdf-viewer" src="{{ url_for('pdf', filename=course.filename) }}#toolbar=0&navpanes=0&scrollbar=1&view=FitH" 
+                               type="application/pdf" class="h-100 w-100"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const descriptionCol = document.getElementById('description-col');
+    const pdfCol = document.getElementById('pdf-col');
+    const toggleBtn = document.getElementById('toggle-description');
+    const closeBtn = document.getElementById('close-description');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const zoomLevelDisplay = document.getElementById('zoom-level');
+    const viewer = document.getElementById('pdf-viewer');
+    
+    let descriptionVisible = localStorage.getItem('descriptionVisible') === 'true';
+    let zoomLevel = 1;
+
+    // Initial setup
+    function setupLayout() {
+        if (descriptionVisible) {
+            descriptionCol.style.display = 'block';
+            pdfCol.classList.remove('col-md-12');
+            pdfCol.classList.add('col-md-8');
+            toggleBtn.querySelector('.btn-text').textContent = 'Masquer';
+        } else {
+            descriptionCol.style.display = 'none';
+            pdfCol.classList.remove('col-md-8');
+            pdfCol.classList.add('col-md-12');
+            toggleBtn.querySelector('.btn-text').textContent = 'Description';
+        }
+    }
+
+    // Toggle description
+    toggleBtn.addEventListener('click', function() {
+        descriptionVisible = !descriptionVisible;
+        localStorage.setItem('descriptionVisible', descriptionVisible);
+        setupLayout();
+    });
+
+    // Close description
+    closeBtn.addEventListener('click', function() {
+        descriptionVisible = false;
+        localStorage.setItem('descriptionVisible', descriptionVisible);
+        setupLayout();
+    });
+
+    // Zoom controls
+    document.querySelectorAll('.zoom-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const action = this.getAttribute('data-action');
+            
+            switch(action) {
+                case 'zoom-in':
+                    zoomLevel = Math.min(zoomLevel + 0.1, 2);
+                    break;
+                case 'zoom-out':
+                    zoomLevel = Math.max(zoomLevel - 0.1, 0.5);
+                    break;
+                case 'fit-width':
+                    zoomLevel = 1;
+                    break;
+            }
+            
+            updateZoom();
+        });
+    });
+
+    function updateZoom() {
+        viewer.style.transform = `scale(${zoomLevel})`;
+        viewer.style.transformOrigin = '0 0';
+        zoomLevelDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
+    }
+
+    // Fullscreen
+    fullscreenBtn.addEventListener('click', function() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    });
+
+    // Initial setup
+    setupLayout();
+});
+</script>
+{% endblock %}
+
+<style>
+.pdf-viewer-container {
+    height: calc(100vh - 100px);
+}
+
+#pdf-embed-container {
+    overflow: auto;
+    background-color: #f5f5f5;
+}
+
+#pdf-viewer {
+    transition: transform 0.3s ease;
+}
+
+.markdown-content {
+    padding: 1rem;
+}
+
+.markdown-content h1, .markdown-content h2 {
+    font-size: 1.5rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.3rem;
+    margin-top: 1.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    #description-col, #pdf-col {
+        height: 50vh !important;
+    }
+    
+    .pdf-viewer-container {
+        height: auto;
+    }
+}
+</style>
+{% endblock %}
