@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mianatra-config
+  labels:
+    app.kubernetes.io/name: mianatra-config
+data:
+  APP_NAME: "Mianatra PDF Academy"
+  ENVIRONMENT: "production"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "480"
+  CORS_ORIGINS: "http://localhost,http://127.0.0.1,http://localhost:3000,http://127.0.0.1:3000"
+  MAX_UPLOAD_SIZE_MB: "25"
+  UPLOAD_DIR: "/app/app/uploads"
+  VITE_API_URL: "/api"
+  POSTGRES_DB: "pdf_courses"
+  POSTGRES_USER: "postgres"
